@@ -1,4 +1,4 @@
-# flask-minio-video-thing
+# tendril
 
 This is a Flask project which allows setup of a self-hosted platform for recording and uploading video clips, which are indexed and stored by the user's email address and date.
 
