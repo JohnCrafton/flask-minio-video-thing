@@ -6,5 +6,266 @@ block head %} {{ super() }} {% endblock %} {% block content %}
   {% if error %}
   <p class="error">{{ error }}</p>
   {% endif %}
+  <div class="container">
+    <h1>Video Capture</h1>
+
+    <div id="captureArea">
+      <video id="video" autoplay></video>
+      <br />
+      <button id="startButton">Start Recording</button>
+      <button id="stopButton" class="hidden">Stop Recording</button>
+      <div class="upload-section">
+        <p>Or upload existing video:</p>
+        <input
+          type="file"
+          id="fileInput"
+          accept="video/mp4,video/quicktime,video/webm,video/x-matroska"
+          style="display: none"
+        />
+        <button id="uploadFileButton">Choose Video File</button>
+        <p class="accepted-formats">Accepted formats: MP4, MOV, WEBM, MKV</p>
+      </div>
+    </div>
+
+    <div id="previewArea" class="hidden">
+      <video id="preview" controls></video>
+      <br />
+      <button id="uploadButton">Upload</button>
+      <button id="retakeButton">Retake</button>
+      <div id="uploadProgress"></div>
+    </div>
+
+    <hr />
+
+    <h2>Recorded Videos</h2>
+    <div id="videoGrid" class="video-grid"></div>
+  </div>
 </div>
+
+<script>
+  let mediaRecorder;
+  let recordedChunks = [];
+
+  async function setupCamera() {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: true,
+    });
+    document.getElementById("video").srcObject = stream;
+    return stream;
+  }
+
+  document.getElementById("startButton").onclick = async () => {
+    const stream = await setupCamera();
+    mediaRecorder = new MediaRecorder(stream, {
+      mimeType: "video/webm",
+    });
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordedChunks, { type: "video/webm" });
+      document.getElementById("preview").src = URL.createObjectURL(blob);
+      document.getElementById("captureArea").classList.add("hidden");
+      document.getElementById("previewArea").classList.remove("hidden");
+    };
+
+    mediaRecorder.start();
+    document.getElementById("startButton").classList.add("hidden");
+    document.getElementById("stopButton").classList.remove("hidden");
+  };
+
+  document.getElementById("stopButton").onclick = () => {
+    mediaRecorder.stop();
+    document
+      .getElementById("video")
+      .srcObject.getTracks()
+      .forEach((track) => track.stop());
+  };
+
+  document.getElementById("retakeButton").onclick = () => {
+    // Clear recorded chunks
+    recordedChunks = [];
+
+    // Clear preview video
+    const previewVideo = document.getElementById("preview");
+    const oldSrc = previewVideo.src;
+    previewVideo.src = "";
+    previewVideo.load();
+
+    // Clear the video object as well
+    const video = document.getElementById("video");
+    video.pause();
+    video.removeAttribute("src");
+    video.load("");
+
+    // Clear the object URL to prevent memory leaks
+    if (oldSrc.startsWith("blob:")) {
+      URL.revokeObjectURL(oldSrc);
+    }
+
+    // Reset UI
+    document.getElementById("previewArea").classList.add("hidden");
+    document.getElementById("captureArea").classList.remove("hidden");
+    document.getElementById("startButton").classList.remove("hidden");
+    document.getElementById("stopButton").classList.add("hidden");
+
+    // Clear upload progress message
+    document.getElementById("uploadProgress").textContent = "";
+  };
+
+  document.getElementById("uploadButton").onclick = async () => {
+    // Disable the retake button
+    document.getElementById("retakeButton").disabled = true;
+
+    const blob = new Blob(recordedChunks, { type: "video/webm" });
+    const formData = new FormData();
+    formData.append("video", blob, "video.webm");
+
+    try {
+      const response = await fetch("/video", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("Upload response:", result); // Debug log
+
+      if (result.success) {
+        document.getElementById("uploadProgress").textContent =
+          "Upload successful! The page will refresh in 5 seconds.";
+        setTimeout(() => {
+          location.reload();
+        }, 5000);
+      } else {
+        document.getElementById("uploadProgress").textContent =
+          "Upload failed: " + result.error;
+        document.getElementById("retakeButton").disabled = false; // Re-enable the retake button
+      }
+    } catch (error) {
+      console.error("Upload error:", error); // Debug log
+      document.getElementById("uploadProgress").textContent =
+        "Upload failed: " + error;
+      document.getElementById("retakeButton").disabled = false; // Re-enable the retake button
+    }
+  };
+
+  const acceptedTypes = [
+    "video/mp4",
+    "video/quicktime",
+    "video/webm",
+    "video/x-matroska",
+  ];
+
+  document.getElementById("uploadFileButton").onclick = () => {
+    document.getElementById("fileInput").click();
+  };
+
+  document.getElementById("fileInput").onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!acceptedTypes.includes(file.type)) {
+      alert("File type not accepted\nSupported formats: MP4, MOV, WEBM, MKV");
+      e.target.value = "";
+      return;
+    }
+
+    // Show preview
+    const url = URL.createObjectURL(file);
+    document.getElementById("preview").src = url;
+    document.getElementById("captureArea").classList.add("hidden");
+    document.getElementById("previewArea").classList.remove("hidden");
+
+    // Store file for upload
+    recordedChunks = [file];
+  };
+
+  async function deleteVideo(videoId) {
+    if (!confirm("Are you sure you want to delete this video?")) return;
+
+    try {
+      const response = await fetch(`/delete-video/${videoId}`);
+      const result = await response.json();
+
+      if (result.success) {
+        document.getElementById(`video-${videoId}`).remove();
+      } else {
+        alert("Error deleting video");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Error deleting video");
+    }
+  }
+
+  async function fetchVideos() {
+    try {
+      const response = await fetch("/my-videos");
+      const videos = await response.json();
+
+      if (response.ok) {
+        displayVideos(videos);
+      } else {
+        console.error("Error fetching videos:", videos.error);
+      }
+    } catch (error) {
+      console.error("Error fetching videos:", error);
+    }
+  }
+
+  function displayVideos(videos) {
+    const videoGrid = document.getElementById("videoGrid");
+    videoGrid.innerHTML = "";
+
+    videos.forEach((video) => {
+      const videoCard = document.createElement("div");
+      videoCard.className = "video-card";
+      videoCard.id = `video-${video.name}`;
+
+      const videoPreview = document.createElement("video");
+      videoPreview.className = "video-preview";
+      videoPreview.src = video.url;
+      videoPreview.controls = true;
+
+      const videoInfo = document.createElement("div");
+      videoInfo.className = "video-info";
+      videoInfo.innerHTML = `<p>Uploaded: ${new Date(
+        video.date
+      ).toLocaleString()}</p>`;
+
+      const videoActions = document.createElement("div");
+      videoActions.className = "video-actions";
+
+      const downloadButton = document.createElement("a");
+      downloadButton.href = video.url;
+      downloadButton.download = video.name;
+      downloadButton.className = "button download";
+      downloadButton.textContent = "Download";
+
+      const deleteButton = document.createElement("button");
+      deleteButton.className = "button delete";
+      deleteButton.textContent = "Delete";
+      deleteButton.onclick = () => deleteVideo(video.name);
+
+      videoActions.appendChild(downloadButton);
+      videoActions.appendChild(deleteButton);
+
+      videoCard.appendChild(videoPreview);
+      videoCard.appendChild(videoInfo);
+      videoCard.appendChild(videoActions);
+
+      videoGrid.appendChild(videoCard);
+    });
+  }
+
+  // Fetch videos on page load
+  fetchVideos();
+</script>
 {% endblock %}
