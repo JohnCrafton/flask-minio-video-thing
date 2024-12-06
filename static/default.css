@@ -1,6 +1,7 @@
 body {
   font-family: "Courier New", Courier, monospace;
   font-size: 14px;
+  max-width: 800px;
   margin: 15px;
   padding: 0;
   background-color: #f0f0f0;
@@ -11,4 +12,97 @@ p.greeting {
   top: 10px;
   right: 10px;
   text-align: right;
+}
+
+.container {
+  text-align: center;
+}
+
+#video,
+#preview {
+  width: 100%;
+  max-width: 640px;
+  margin: 20px 0;
+}
+
+.hidden {
+  display: none;
+}
+
+button {
+  padding: 10px 20px;
+  margin: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  background: #007bff;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+}
+
+button:hover {
+  background: #0056b3;
+}
+
+#uploadProgress {
+  margin: 10px 0;
+}
+
+.upload-section {
+  margin: 20px 0;
+  padding: 20px;
+  border-top: 1px solid #dddddd;
+}
+
+.accepted-formats {
+  color: #666666;
+  font-size: 0.9em;
+  margin: 10px 0;
+}
+
+.error {
+  color: #dc3545;
+  margin: 10px 0;
+}
+
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+.video-card {
+  border: 1px solid #dddddd;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.video-preview {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+}
+
+.video-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+}
+
+.download {
+  background: #28a745;
+  color: #ffffff;
+}
+
+.delete {
+  background: #dc3545;
+  color: #ffffff;
 }
