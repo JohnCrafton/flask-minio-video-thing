@@ -1,0 +1,10 @@
+<!-- templates/video.html -->
+{% extends "base.html" %} {% block title %}Video ({{ email }}){% endblock %} {%
+block head %} {{ super() }} {% endblock %} {% block content %}
+<div>
+  <h2>Record or Upload a Video</h2>
+  {% if error %}
+  <p class="error">{{ error }}</p>
+  {% endif %}
+</div>
+{% endblock %}
