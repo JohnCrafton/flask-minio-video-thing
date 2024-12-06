@@ -1,0 +1,31 @@
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      {% block title %}Short Video Uploads - {{ page }}{% endblock %}
+    </title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='n.min.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='default.css') }}"
+    />
+    {% block head %}{% endblock %}
+  </head>
+  <body>
+    <header>
+      <h1>Short Video Uploads</h1>
+      {% if email %}
+      <p class="greeting">Welcome, {{ email }}</p>
+      {% endif %}
+    </header>
+    <main>{% block content %}{% endblock %}</main>
+    <footer>
+      <p>&copy; 2024 - crafton.dev</p>
+    </footer>
+    <script src="{{ url_for('static', filename='scripts.js') }}"></script>
+  </body>
+</html>

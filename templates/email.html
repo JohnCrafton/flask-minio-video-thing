@@ -1,0 +1,19 @@
+<!-- templates/email.html -->
+{% extends "base.html" %} {% block title %}Email Capture{% endblock %} {% block
+head %} {{ super() }} {% endblock %} {% block content %}
+<div>
+  <h2>Enter Your Email</h2>
+  {% if error %}
+  <p class="error">{{ error }}</p>
+  {% endif %}
+  <form id="emailForm" method="POST" action="/email">
+    <input
+      type="email"
+      name="email"
+      placeholder="Enter your email address"
+      required
+    />
+    <button type="submit">Submit</button>
+  </form>
+</div>
+{% endblock %}
